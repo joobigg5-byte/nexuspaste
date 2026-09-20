@@ -1,0 +1,33 @@
+{
+  "name": "NexusPaste",
+  "short_name": "NexusPaste",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#0a0c12",
+  "theme_color": "#0a0c12",
+  "icons": [
+    {
+      "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgdmlld0JveD0iMCAwIDUxMiA1MTIiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjUxMiIgaGVpZ2h0PSI1MTIiIHJ4PSIxMjgiIGZpbGw9IiMwYTBjMTIiLz48cGF0aCBkPSJNMjU2IDEwNC41bC03MCAxMjEuM3YyMTAuOUw0NCAzNjkuN3YtMjEwLjlMMjU2IDEwNC41eiBNMjU2IDI2Mi42bC0xMjQtNzEuNUwyNTYgMTE5LjVsMTI0IDcxLjUtMTI0IDcxLjZ6IiBmaWxsPSIjNGY4Y2UzIi8+PHBhdGggZD0iTTQ2OCAzNjkuN2wtMTQyIDY3LjJ2LTIxMC45TDI1NiAyNjIuNnYtMTQzLjFsMjEyLTEyMi41djE0My4xbC0yMTIgMTIyLjV2MTQzLjF6IiBmaWxsPSIjZDc2ODg0Ii8+PC9zdmc+",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "share_target": {
+    "action": "./",
+    "method": "GET",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  },
+  "shortcuts": [
+    {
+      "name": "New note",
+      "short_name": "New",
+      "url": "./?new=1"
+    }
+  ],
+  "description": "A scratchpad that follows you: notes, images, OCR, translation, and an encrypted vault."
+}

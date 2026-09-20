@@ -1,0 +1,1239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#0a0c12">
+    <title>NexusPaste · AI Assistant | Powered by KobBot</title>
+    <link rel="manifest" href="./manifest.json">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.0/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <style>
+        /* Full CSS as above, unchanged */
+        :root {
+            --bg: #0a0c12;
+            --surface: #1a1c23;
+            --surface2: #242732;
+            --surface3: #2a2e39;
+            --cyan: #4f8ce3;
+            --magenta: #d76884;
+            --purple: #a855f7;
+            --gold: #cbb26a;
+            --text: #e2e2ea;
+            --text2: #9ca3af;
+            --text3: #6b7280;
+            --border: rgba(255, 255, 255, 0.08);
+            --border-strong: rgba(255, 255, 255, 0.15);
+            --input-bg: #1a1d24;
+            --editor-bg: #0d0f14;
+            --content-bg: #12141a;
+            --clip-bg: #1e212a;
+            --dev-bg: #1e212a;
+            --modal-bg: #1e212a;
+            --shadow: 0 25px 60px rgba(0, 0, 0, 0.8);
+            --toast-bg: #1e212a;
+            --toast-border: #4f8ce3;
+            --btn-bg: linear-gradient(135deg, #4f8ce3, #a855f7);
+            --editor-font-size: 0.95rem;
+        }
+        .light-theme {
+            --bg: #f0f2f5;
+            --surface: #ffffff;
+            --surface2: #e5e7eb;
+            --surface3: #d1d5db;
+            --cyan: #2563eb;
+            --magenta: #be185d;
+            --purple: #7c3aed;
+            --gold: #b45309;
+            --text: #111827;
+            --text2: #374151;
+            --text3: #6b7280;
+            --border: rgba(0, 0, 0, 0.08);
+            --border-strong: rgba(0, 0, 0, 0.15);
+            --input-bg: #ffffff;
+            --editor-bg: #ffffff;
+            --content-bg: #e5e7eb;
+            --clip-bg: #ffffff;
+            --dev-bg: #ffffff;
+            --modal-bg: #ffffff;
+            --shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            --toast-bg: #ffffff;
+            --toast-border: #2563eb;
+            --btn-bg: linear-gradient(135deg, #2563eb, #7c3aed);
+            --editor-font-size: 0.95rem;
+        }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        html { font-size:16px; scroll-behavior:smooth; }
+        body {
+            font-family:'Inter',system-ui,-apple-system,sans-serif;
+            background:var(--bg);
+            color:var(--text);
+            min-height:100vh;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            overflow:hidden;
+            transition:background 0.3s,color 0.3s;
+        }
+        .fab {
+            position:fixed; width:58px; height:58px; border-radius:50%;
+            background:linear-gradient(135deg, var(--cyan), var(--purple));
+            color:white; display:flex; align-items:center; justify-content:center;
+            font-size:1.8rem; cursor:grab; z-index:2000; border:none;
+            box-shadow:0 0 25px rgba(79,140,227,0.6), 0 0 45px rgba(168,85,247,0.4);
+            transition:transform 0.3s,opacity 0.3s; user-select:none;
+            animation:floatPulse 2.8s infinite; touch-action:none; will-change:transform;
+        }
+        .fab:active { cursor:grabbing; }
+        .fab.hidden { transform:scale(0); opacity:0; pointer-events:none; }
+        @keyframes floatPulse {
+            0%,100%{ box-shadow:0 0 20px rgba(79,140,227,0.5); }
+            50%{ box-shadow:0 0 35px rgba(168,85,247,0.8); }
+        }
+        .app-overlay {
+            position:fixed; inset:0; z-index:1900;
+            background:rgba(10,12,18,0.9); backdrop-filter:blur(20px);
+            display:flex; align-items:center; justify-content:center;
+            opacity:0; pointer-events:none; transition:opacity 0.4s;
+            padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+        }
+        .app-overlay.active { opacity:1; pointer-events:auto; }
+        .main-container {
+            width:100%; max-width:1000px; height:90vh; max-height:900px;
+            border-radius:28px; overflow:hidden;
+            border:1px solid var(--border-strong);
+            background:linear-gradient(135deg, var(--surface3), var(--surface), #2d1b2e);
+            box-shadow:var(--shadow);
+            display:flex; flex-direction:column; position:relative;
+            transform:scale(0.92); transition:transform 0.45s cubic-bezier(0.175,0.885,0.32,1.275);
+        }
+        .app-overlay.active .main-container { transform:scale(1); }
+        .close-btn {
+            position:absolute; top:16px; right:16px; z-index:30;
+            background:linear-gradient(to bottom, var(--surface3), var(--surface));
+            border:1px solid var(--border-strong); border-radius:10px; padding:8px;
+            cursor:pointer; box-shadow:inset 0 1px 1px rgba(255,255,255,0.2),0 4px 6px rgba(0,0,0,0.6);
+            transition:filter 0.2s;
+        }
+        .close-btn:hover { filter:brightness(1.2); }
+        .header {
+            display:flex; align-items:center; justify-content:space-between;
+            padding:28px 32px 20px; position:relative; z-index:10;
+        }
+        .left-group { display:flex; align-items:center; gap:16px; }
+        .logo-hex { width:58px; height:58px; filter:drop-shadow(0 8px 8px rgba(0,0,0,0.6)); }
+        .pen-icon { width:24px; height:24px; color:var(--text2); filter:drop-shadow(0 2px 4px rgba(0,0,0,0.8)); transform:rotate(-12deg); }
+        .center-group { text-align:center; }
+        .app-title {
+            font-family:'Orbitron',sans-serif; font-size:3.5rem; font-weight:900;
+            letter-spacing:-0.02em; line-height:1;
+            background:linear-gradient(90deg, #1c4182, #627cb2, #a895b1, #b63e6f);
+            -webkit-background-clip:text;
+            background-clip:text;
+            -webkit-text-fill-color:transparent;
+            text-shadow:0px 1px 0 rgba(255,255,255,0.3),
+                0px 2px 0 #1e222d,0px 3px 0 #1a1d26,0px 4px 0 #15181f,
+                0px 5px 0 #111319,0px 6px 0 #0c0d12,0px 7px 0 #08090c,
+                0px 12px 15px rgba(0,0,0,0.9);
+        }
+        .subtitle {
+            font-family:'Orbitron',sans-serif; font-size:0.9rem; letter-spacing:0.2em;
+            color:var(--text2); margin-top:4px; text-shadow:0 2px 4px rgba(0,0,0,0.8);
+        }
+        .right-group { display:flex; align-items:center; gap:18px; }
+        .btn-3d-save {
+            background:linear-gradient(to bottom, #d8deed, #757f9a);
+            border:1px solid rgba(255,255,255,0.4); border-radius:8px; padding:6px;
+            cursor:pointer; box-shadow:inset 0 2px 0 rgba(255,255,255,0.6),0 6px 10px rgba(0,0,0,0.8);
+            transition:filter 0.2s; display:flex; align-items:center; justify-content:center;
+        }
+        .btn-3d-save:hover { filter:brightness(1.2); transform:translateY(-2px); }
+        .btn-3d-save svg { fill:#2d3442; filter:drop-shadow(0 1px 0 rgba(255,255,255,0.4)); width:22px; height:22px; }
+        .icon-btn { background:none; border:none; color:var(--text2); cursor:pointer; filter:drop-shadow(0 4px 6px rgba(0,0,0,0.6)); transition:transform 0.2s; }
+        .icon-btn:hover { transform:translateY(-1px); color:white; }
+        .trash-btn {
+            display:flex; flex-direction:column; align-items:center;
+            background:linear-gradient(to bottom, var(--surface3), var(--surface));
+            border:1px solid var(--border-strong); border-radius:8px; padding:6px 10px;
+            cursor:pointer; transition:filter 0.2s;
+            box-shadow:inset 0 1px 1px rgba(255,255,255,0.1),0 4px 6px rgba(0,0,0,0.6);
+        }
+        .trash-btn:hover { filter:brightness(1.15); }
+        .trash-btn span { font-size:0.6rem; color:var(--text3); margin-top:2px; }
+        .battery { display:flex; align-items:center; gap:2px; filter:drop-shadow(0 2px 4px rgba(0,0,0,0.8)); }
+        .battery-body { width:28px; height:14px; border:2px solid var(--text2); border-radius:2px; padding:1px; display:flex; }
+        .battery-fill { width:60%; height:100%; background:#4ade80; border-radius:1px; box-shadow:0 0 10px rgba(74,222,128,0.8); }
+        .battery-cap { width:4px; height:8px; background:var(--text2); border-radius:0 2px 2px 0; }
+        .tab-bar {
+            display:flex; background:linear-gradient(to bottom, var(--surface3), var(--surface));
+            border-top:1px solid var(--border); border-bottom:1px solid rgba(0,0,0,0.5);
+            box-shadow:0 10px 20px rgba(0,0,0,0.6); position:relative; z-index:10;
+        }
+        .tab-btn-new {
+            flex:1; display:flex; justify-content:center; align-items:center; padding:16px 0;
+            background:transparent; border:none; color:var(--text2); cursor:pointer;
+            transition:all 0.2s; position:relative; border-right:1px solid var(--border);
+        }
+        .tab-btn-new:last-child { border-right:none; }
+        .tab-btn-new:hover { background:rgba(255,255,255,0.03); color:var(--text); }
+        .tab-btn-new.active {
+            background:linear-gradient(to bottom, var(--surface3), var(--surface));
+            box-shadow:inset 0 0 20px rgba(0,0,0,0.8); color:white;
+        }
+        .tab-btn-new.active::after {
+            content:''; position:absolute; inset:0; border:1.5px solid var(--gold);
+            border-radius:2px; box-shadow:0 0 12px rgba(203,178,106,0.4),inset 0 0 8px rgba(203,178,106,0.2);
+            pointer-events:none;
+        }
+        .tab-btn-new svg { width:26px; height:26px; filter:drop-shadow(0 2px 3px rgba(0,0,0,0.9)); }
+        .content-area {
+            flex:1; position:relative; background:var(--content-bg);
+            background-image:repeating-linear-gradient(-45deg, rgba(255,255,255,0.03) 0, rgba(255,255,255,0.03) 2px, transparent 2px, transparent 6px);
+            box-shadow:inset 0 20px 20px rgba(0,0,0,0.5);
+            overflow-y:auto; padding:30px 28px 50px; transition:background 0.3s;
+        }
+        .content-area::before {
+            content:''; position:absolute; inset:0;
+            background:linear-gradient(to bottom, rgba(0,0,0,0.4) 0%, transparent 30%, rgba(0,0,0,0.8) 100%);
+            pointer-events:none; z-index:2;
+        }
+        .tab-panel { display:none; position:relative; z-index:3; }
+        .tab-panel.active { display:block; }
+        .editor-zone {
+            background:var(--editor-bg); border:1px solid var(--border);
+            border-radius:20px; padding:40px 32px;
+            box-shadow:inset 0 10px 30px rgba(0,0,0,0.9),0 5px 15px rgba(0,0,0,0.5);
+            min-height:240px; display:flex; flex-direction:column; align-items:center; justify-content:center; position:relative;
+            transition:background 0.3s;
+        }
+        .editor-zone.expanded {
+            position:fixed !important;
+            top:0; left:0; right:0; bottom:0;
+            width:100% !important; height:100% !important;
+            max-width:none !important; max-height:none !important;
+            z-index:9999;
+            border-radius:0;
+            padding:20px;
+        }
+        .editor-area {
+            width:100%; min-height:180px; outline:none; color:var(--text);
+            font-size:var(--editor-font-size); line-height:1.7;
+            word-break:break-word; padding:10px; border-radius:12px; z-index:4;
+        }
+        .editor-area:empty::before {
+            content:'✨ Paste text, images, or drop files here...';
+            color:var(--text3); font-style:italic; display:block; text-align:center; padding:30px 10px; opacity:0.8;
+        }
+        .editor-area img { max-width:100%; max-height:300px; border-radius:8px; margin:6px; }
+        .editor-toolbar {
+            display:flex; gap:8px; align-items:center; margin-top:8px; z-index:5;
+        }
+        .zoom-btn, .expand-btn {
+            background:var(--surface2); border:1px solid var(--border); border-radius:6px;
+            color:var(--text2); cursor:pointer; padding:4px 10px; font-size:0.9rem;
+            transition:0.2s;
+        }
+        .zoom-btn:hover, .expand-btn:hover { color:white; border-color:var(--cyan); }
+        .kobbot-wrapper { position:absolute; bottom:-28px; left:50%; transform:translateX(-50%); z-index:20; }
+        .kobbot-trigger {
+            background:var(--editor-bg); border:1px solid var(--border);
+            border-radius:16px; padding:12px 32px; cursor:pointer;
+            display:flex; align-items:center; gap:8px;
+            box-shadow:0 0 20px rgba(168,85,247,0.3); transition:box-shadow 0.3s; position:relative;
+        }
+        .kobbot-trigger:hover { box-shadow:0 0 28px rgba(168,85,247,0.6); }
+        .kobbot-trigger::before {
+            content:''; position:absolute; inset:-2px; border-radius:18px;
+            background:linear-gradient(to right, #3b82f6, #a855f7, #ec4899);
+            z-index:-1; opacity:0.8; filter:blur(8px);
+        }
+        .kobbot-dropdown {
+            position:absolute; bottom:calc(100% + 12px); left:50%; transform:translateX(-50%);
+            background:var(--modal-bg); border:1px solid var(--border-strong);
+            border-radius:14px; padding:8px; min-width:220px; display:none; z-index:50;
+            flex-wrap:wrap; gap:4px; backdrop-filter:blur(12px); box-shadow:0 20px 40px rgba(0,0,0,0.7);
+            transition:background 0.3s;
+        }
+        .kobbot-dropdown.active { display:flex; }
+        .kobbot-dropdown button {
+            flex:1 1 45%; padding:10px 8px; border-radius:10px; background:transparent;
+            border:1px solid var(--border); color:var(--text2); cursor:pointer; font-size:0.7rem;
+            text-align:left; transition:0.2s; display:flex; align-items:center; gap:4px;
+        }
+        .kobbot-dropdown button:hover { background:rgba(79,140,227,0.15); border-color:var(--cyan); color:white; }
+        .clip-item {
+            background:var(--clip-bg); border:1px solid var(--border); border-radius:12px;
+            padding:14px; margin-bottom:10px; cursor:pointer; transition:0.2s;
+        }
+        .clip-item:hover { border-color:var(--purple); box-shadow:0 0 15px rgba(168,85,247,0.2); }
+        .dev-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(130px,1fr)); gap:10px; }
+        .dev-tool-card, .assistant-card {
+            background:var(--dev-bg); border:1px solid var(--border); border-radius:12px;
+            padding:16px 10px; text-align:center; font-size:0.8rem; cursor:pointer; transition:0.2s;
+            display:flex; flex-direction:column; align-items:center; gap:6px;
+        }
+        .dev-tool-card:hover, .assistant-card:hover { border-color:#4ade80; box-shadow:0 0 15px rgba(74,222,128,0.2); }
+        .btn {
+            background:var(--btn-bg); border:none; border-radius:8px; padding:8px 16px;
+            color:white; font-weight:600; cursor:pointer; transition:filter 0.2s;
+        }
+        .btn:hover { filter:brightness(1.2); }
+        .modal-overlay {
+            position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:3000;
+            display:flex; align-items:center; justify-content:center; backdrop-filter:blur(6px);
+        }
+        .modal {
+            background:var(--modal-bg); border:1px solid var(--border-strong); border-radius:20px;
+            padding:24px; max-width:480px; width:90%; max-height:80vh; overflow-y:auto;
+            box-shadow:0 20px 50px rgba(0,0,0,0.8); transition:background 0.3s;
+        }
+        .toast-container { position:fixed; bottom:24px; right:24px; z-index:4000; display:flex; flex-direction:column; gap:8px; pointer-events:none; }
+        .toast {
+            background:var(--toast-bg); border:1px solid var(--toast-border);
+            padding:10px 18px; border-radius:30px; color:var(--text); font-size:0.8rem;
+            box-shadow:0 0 15px rgba(79,140,227,0.3); animation:toastIn 0.3s ease, toastOut 0.3s ease 2.5s forwards;
+            transition:background 0.3s,border 0.3s;
+        }
+        @keyframes toastIn { from{ transform:translateX(120%); opacity:0; } to{ transform:translateX(0); opacity:1; } }
+        @keyframes toastOut { from{ transform:translateX(0); opacity:1; } to{ transform:translateX(120%); opacity:0; } }
+        @media (max-width:600px) {
+            .app-title { font-size:2.5rem; }
+            .header { padding:20px 16px; }
+            .editor-zone { padding:20px 16px; }
+        }
+    </style>
+</head>
+<body>
+    <canvas id="particleCanvas" style="position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none;opacity:0.4;"></canvas>
+    <button class="fab" id="fabButton">⬡</button>
+
+    <div class="app-overlay" id="appOverlay">
+        <div class="main-container">
+            <button class="close-btn" id="closeAppBtn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M18 6L6 18M6 6l12 12" />
+                </svg>
+            </button>
+
+            <div class="header">
+                <div class="left-group">
+                    <div class="logo-hex">
+                        <svg viewBox="0 0 100 100" width="100%" height="100%">
+                            <defs>
+                                <linearGradient id="hexGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" stop-color="#4f8ce3" />
+                                    <stop offset="100%" stop-color="#d76884" />
+                                </linearGradient>
+                            </defs>
+                            <polygon points="50,5 95,27.5 95,72.5 50,95 5,72.5 5,27.5" fill="none" stroke="url(#hexGrad)" stroke-width="8" stroke-linejoin="round" />
+                            <polygon points="50,25 75,40 75,60 50,75 25,60 25,40" fill="url(#hexGrad)" />
+                            <path d="M50 25 L50 75 M25 40 L75 60 M75 40 L25 60" stroke="#1a1c23" stroke-width="4" />
+                        </svg>
+                    </div>
+                    <svg class="pen-icon" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M7.127 22.562l-7.127 1.438 1.438-7.128 5.689 5.69zm1.414-1.414l11.228-11.225-5.69-5.692-11.227 11.227 5.689 5.69zm9.768-21.148l-2.816 2.817 5.691 5.691 2.816-2.819-5.691-5.689z" />
+                    </svg>
+                </div>
+                <div class="center-group">
+                    <h1 class="app-title">NexusPaste</h1>
+                    <p class="subtitle">AI Assistant · Powered by KobBot</p>
+                </div>
+                <div class="right-group">
+                    <button class="icon-btn" id="btnTheme" title="Theme">🌓</button>
+                    <button class="icon-btn" id="btnVoice" title="Voice">🎤</button>
+                    <button class="btn-3d-save" id="btnSaveClip" title="Save">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2zM17 21v-8H7v8M14 3v5H7V3" />
+                        </svg>
+                    </button>
+                    <button class="trash-btn" id="btnClearEditor">
+                        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                        <span>Clear</span>
+                    </button>
+                    <div class="battery">
+                        <div class="battery-body"><div class="battery-fill"></div></div>
+                        <div class="battery-cap"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-bar" id="tabNav">
+                <button class="tab-btn-new active" data-tab="editor">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                </button>
+                <button class="tab-btn-new" data-tab="assistant">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                </button>
+                <button class="tab-btn-new" data-tab="history">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+                </button>
+                <button class="tab-btn-new" data-tab="devtools">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                </button>
+                <button class="tab-btn-new" data-tab="share">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                </button>
+            </div>
+
+            <div class="content-area" id="appScroll">
+                <div class="tab-panel active" id="panel-editor">
+                    <div class="editor-zone" id="editorZone">
+                        <div class="editor-area" id="editorArea" contenteditable="true"></div>
+                        <div class="editor-toolbar">
+                            <button class="zoom-btn" id="zoomOutBtn" title="Zoom out">🔍➖</button>
+                            <button class="zoom-btn" id="zoomInBtn" title="Zoom in">🔍➕</button>
+                            <button class="expand-btn" id="expandBtn" title="Expand editor">⛶</button>
+                            <button class="expand-btn" id="btnTTS" title="Read aloud">🔊</button>
+                        </div>
+                        <div class="kobbot-wrapper" id="kobbotWrapper">
+                            <button class="kobbot-trigger" id="kobbotTrigger">
+                                <svg width="20" height="20" fill="none" stroke="#60a5fa" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                                <span style="font-weight:700; background:linear-gradient(to right, #67e8f9, #f472b6); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;">KobBot AI</span>
+                            </button>
+                            <div class="kobbot-dropdown" id="kobbotDropdown">
+                                <button data-ai="explain">📝 Explain</button>
+                                <button data-ai="improve">✨ Improve</button>
+                                <button data-ai="summarize">📋 Summarize</button>
+                                <button data-ai="translate">🌍 Translate</button>
+                                <button data-ai="generate-code">💻 Code</button>
+                                <button data-ai="fix-bugs">🐞 Fix</button>
+                                <button id="btnUploadImageDrawer">📷 Image</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tab-panel" id="panel-assistant">
+                    <div class="dev-grid" id="assistantGrid">
+                        <div class="assistant-card" data-action="screenshot">📸 Screenshot</div>
+                        <div class="assistant-card" data-action="screenrecord">🎥 Record Screen</div>
+                        <div class="assistant-card" data-action="dictionary">📖 Dictionary</div>
+                        <div class="assistant-card" data-action="translator">🌐 Translator</div>
+                        <div class="assistant-card" data-action="downloadpdf">📄 Save as PDF</div>
+                        <div class="assistant-card" data-action="downloadhtml">🌐 Download HTML</div>
+                        <div class="assistant-card" data-action="ocr">🔍 OCR (Image to Text)</div>
+                        <div class="assistant-card" data-action="tts">🔊 Read Aloud</div>
+                    </div>
+                </div>
+
+                <div class="tab-panel" id="panel-history">
+                    <div style="display:flex;gap:12px;margin-bottom:14px;">
+                        <input type="text" id="searchHistory" placeholder="🔍 Search clips..." style="flex:1; background:var(--input-bg); border:1px solid var(--border); border-radius:30px; padding:10px 16px; color:var(--text); font-family:inherit;">
+                        <button class="btn" id="btnExportClips">📤 Export</button>
+                        <button class="btn" id="btnImportClips">📥 Import</button>
+                    </div>
+                    <div id="timelineContainer"></div>
+                </div>
+
+                <div class="tab-panel" id="panel-devtools">
+                    <div class="dev-grid" id="devToolsGrid">
+                        <div class="dev-tool-card" data-devtool="beautify-json">📦 Beautify JSON</div>
+                        <div class="dev-tool-card" data-devtool="minify-json">📦 Minify JSON</div>
+                        <div class="dev-tool-card" data-devtool="base64-encode">🔐 Base64 Encode</div>
+                        <div class="dev-tool-card" data-devtool="base64-decode">🔓 Base64 Decode</div>
+                        <div class="dev-tool-card" data-devtool="uuid-gen">🆔 UUID</div>
+                        <div class="dev-tool-card" data-devtool="hash-sha">#️⃣ SHA-256</div>
+                        <div class="dev-tool-card" data-devtool="jwt-decode">🎫 JWT Decode</div>
+                        <div class="dev-tool-card" data-devtool="regex-test">🔍 Regex</div>
+                        <div class="dev-tool-card" data-devtool="url-encode">🔗 URL Encode</div>
+                        <div class="dev-tool-card" data-devtool="calculator">🧮 Calculator</div>
+                        <div class="dev-tool-card" data-devtool="forex">💱 Live Forex</div>
+                    </div>
+                    <div id="devToolResult" style="margin-top:14px; background:var(--dev-bg); border-radius:16px; padding:16px; display:none; border:1px solid var(--border);">
+                        <div style="display:flex; justify-content:space-between;">
+                            <strong id="devResultTitle" style="color:var(--cyan);">Result</strong>
+                            <button class="btn" id="btnCopyDevResult">📋 Copy</button>
+                        </div>
+                        <pre id="devResultContent" style="background:var(--editor-bg); padding:12px; border-radius:10px; max-height:200px; overflow:auto; font-family:'JetBrains Mono',monospace; font-size:0.75rem; color:var(--text); white-space:pre-wrap; word-break:break-all;"></pre>
+                    </div>
+                </div>
+
+                <div class="tab-panel" id="panel-share">
+                    <div style="text-align:center; padding:20px;">
+                        <h3 style="color:var(--cyan); margin-bottom:16px;">📤 Share Center</h3>
+                        <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:center;">
+                            <button class="btn" id="btnShareQR">📱 QR</button>
+                            <button class="btn" id="btnShareCopyLink">🔗 Link</button>
+                            <button class="btn" id="btnShareDownload">📥 Download</button>
+                            <button class="btn" id="btnShareEmail">📧 Email</button>
+                        </div>
+                        <div id="qrShareContainer" style="margin-top:20px; display:flex; justify-content:center; background: var(--dev-bg); padding: 15px; border-radius: 12px; width: max-content; margin-inline: auto;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <input type="file" id="hiddenFileInput" accept="image/*" multiple style="display:none;">
+    <input type="file" id="importFileInput" accept=".json" style="display:none;">
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script>
+        (() => {
+            const fab = document.getElementById('fabButton');
+            const overlay = document.getElementById('appOverlay');
+            const closeBtn = document.getElementById('closeAppBtn');
+            const editorArea = document.getElementById('editorArea');
+            const tabNav = document.getElementById('tabNav');
+            const toastContainer = document.getElementById('toastContainer');
+            const particleCanvas = document.getElementById('particleCanvas');
+            const ctx = particleCanvas.getContext('2d');
+            const hiddenFileInput = document.getElementById('hiddenFileInput');
+            const importFileInput = document.getElementById('importFileInput');
+            const searchHistoryInput = document.getElementById('searchHistory');
+            const timelineContainer = document.getElementById('timelineContainer');
+            const devResultContainer = document.getElementById('devToolResult');
+            const devResultTitle = document.getElementById('devResultTitle');
+            const devResultContent = document.getElementById('devResultContent');
+            const qrContainer = document.getElementById('qrShareContainer');
+            const kobbotTrigger = document.getElementById('kobbotTrigger');
+            const kobbotDropdown = document.getElementById('kobbotDropdown');
+            const btnVoice = document.getElementById('btnVoice');
+            const editorZone = document.getElementById('editorZone');
+            const zoomOutBtn = document.getElementById('zoomOutBtn');
+            const zoomInBtn = document.getElementById('zoomInBtn');
+            const expandBtn = document.getElementById('expandBtn');
+            const btnTTS = document.getElementById('btnTTS');
+
+            let clips = [];
+            let currentTab = 'editor';
+            let isListening = false;
+            let recognition = null;
+            let particleAnimId = null;
+            let particles = [];
+            let editorExpanded = false;
+            let currentZoom = 0.95;
+
+            // ---------- Text zoom and editor expansion ----------
+            function updateZoom(delta) {
+                currentZoom = Math.min(2.0, Math.max(0.7, currentZoom + delta));
+                document.documentElement.style.setProperty('--editor-font-size', currentZoom + 'rem');
+                saveEditorDraft();
+            }
+            zoomOutBtn.addEventListener('click', () => updateZoom(-0.1));
+            zoomInBtn.addEventListener('click', () => updateZoom(0.1));
+            document.addEventListener('keydown', e => {
+                if (e.ctrlKey && (e.key === '+' || e.key === '=')) { e.preventDefault(); updateZoom(0.1); }
+                else if (e.ctrlKey && e.key === '-') { e.preventDefault(); updateZoom(-0.1); }
+            });
+            expandBtn.addEventListener('click', () => {
+                editorExpanded = !editorExpanded;
+                if (editorExpanded) { editorZone.classList.add('expanded'); expandBtn.textContent = '⛶ Collapse'; }
+                else { editorZone.classList.remove('expanded'); expandBtn.textContent = '⛶'; }
+            });
+
+            // ---------- Toast & Modal ----------
+            function showToast(msg) {
+                const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg;
+                toastContainer.appendChild(t); setTimeout(() => t.remove(), 2800);
+            }
+            function showModal(title, contentHtml) {
+                const modal = document.createElement('div'); modal.className = 'modal-overlay';
+                modal.innerHTML = `<div class="modal"><h3 style="color:var(--cyan);margin-bottom:12px;">${title}</h3><div>${contentHtml}</div><button class="btn" style="margin-top:16px;width:100%;" id="closeModalBtn">Close</button></div>`;
+                document.body.appendChild(modal);
+                modal.querySelector('#closeModalBtn').addEventListener('click', () => modal.remove());
+                modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+            }
+
+            // ---------- Persistence ----------
+            function loadClips() { try { clips = JSON.parse(localStorage.getItem('nexus_clips') || '[]'); } catch { clips = []; } }
+            function saveClips() { try { localStorage.setItem('nexus_clips', JSON.stringify(clips)); } catch {} }
+            function loadEditorDraft() { const saved = localStorage.getItem('nexus_editor_draft'); if (saved && !editorArea.innerHTML.trim()) editorArea.innerHTML = saved; }
+            let saveFailed = false;
+            function saveEditorDraft() {
+                try {
+                    localStorage.setItem('nexus_editor_draft', editorArea.innerHTML);
+                    saveFailed = false;
+                } catch (err) {
+                    // Almost always QuotaExceededError: pasted images are
+                    // stored as base64 inside the note, and localStorage
+                    // is about 5 MB. This used to fail silently, which is
+                    // the worst possible way for it to fail — you keep
+                    // typing into something that stopped saving an hour
+                    // ago and only find out on refresh.
+                    if (!saveFailed) {
+                        saveFailed = true;
+                        showToast('⚠️ Out of storage — export a backup, this is no longer saving');
+                    }
+                }
+            }
+
+            /*
+             * And the phone half of the same bug. A phone browser does
+             * not fire a clean close: the tab is switched away from, the
+             * screen locks, or the system reclaims the page with no
+             * warning. visibilitychange is the one event that is
+             * reliably delivered before that happens, and pagehide
+             * covers the desktop case of closing the tab.
+             *
+             * beforeunload is deliberately not used — it is ignored on
+             * iOS and unreliable on Android, which is exactly where this
+             * matters most.
+             */
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'hidden') { clearTimeout(window._saveTimeout); saveEditorDraft(); }
+            });
+            window.addEventListener('pagehide', () => { clearTimeout(window._saveTimeout); saveEditorDraft(); });
+
+            // ---------- Tab Switching ----------
+            function switchTab(tab) {
+                currentTab = tab;
+                document.querySelectorAll('.tab-btn-new').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+                const activeBtn = tabNav.querySelector(`[data-tab="${tab}"]`);
+                const activePanel = document.getElementById(`panel-${tab}`);
+                if (activeBtn) activeBtn.classList.add('active');
+                if (activePanel) activePanel.classList.add('active');
+                if (tab === 'history') renderTimeline();
+            }
+            tabNav.addEventListener('click', e => { const btn = e.target.closest('.tab-btn-new'); if (btn) switchTab(btn.dataset.tab); });
+
+            // ---------- Editor Events ----------
+            editorArea.addEventListener('input', () => { clearTimeout(window._saveTimeout); window._saveTimeout = setTimeout(saveEditorDraft, 500); });
+            editorArea.addEventListener('paste', e => {
+                const items = e.clipboardData?.items; if (!items) return;
+                for (const item of items) {
+                    if (item.type.startsWith('image/')) {
+                        e.preventDefault(); const blob = item.getAsFile();
+                        const reader = new FileReader();
+                        reader.onload = ev => { const img = document.createElement('img'); img.src = ev.target.result; img.style.maxWidth='100%'; img.style.maxHeight='300px'; img.style.borderRadius='8px'; img.style.margin='6px'; editorArea.appendChild(img); saveEditorDraft(); };
+                        reader.readAsDataURL(blob);
+                    }
+                }
+            });
+            editorZone.addEventListener('dragover', e => e.preventDefault());
+            editorZone.addEventListener('drop', e => {
+                e.preventDefault();
+                Array.from(e.dataTransfer.files).forEach(file => {
+                    if (file.type.startsWith('image/')) {
+                        const reader = new FileReader();
+                        reader.onload = ev => { const img = document.createElement('img'); img.src = ev.target.result; img.style.maxWidth='100%'; img.style.maxHeight='300px'; img.style.borderRadius='8px'; img.style.margin='6px'; editorArea.appendChild(img); saveEditorDraft(); };
+                        reader.readAsDataURL(file);
+                    }
+                });
+            });
+            document.getElementById('btnClearEditor').addEventListener('click', () => { editorArea.innerHTML = ''; saveEditorDraft(); showToast('🧹 Editor cleared'); });
+            document.getElementById('btnSaveClip').addEventListener('click', () => {
+                const content = editorArea.innerHTML.trim(); if (!content) return showToast('⚠️ Nothing to save!');
+                const clip = { id: Date.now(), content: content, plainText: editorArea.textContent.trim().slice(0,300), date: new Date().toLocaleString(), pinned: false };
+                clips.unshift(clip); if (clips.length > 150) clips.length = 150;
+                saveClips(); renderTimeline(); showToast('✅ Clip saved');
+            });
+
+            // ---------- History ----------
+            function escapeHtml(str) { const d = document.createElement('div'); d.textContent = str || ''; return d.innerHTML; }
+            function renderTimeline() {
+                const searchTerm = searchHistoryInput?.value?.toLowerCase() || '';
+                const filtered = searchTerm ? clips.filter(c => (c.plainText||'').toLowerCase().includes(searchTerm) || (c.content||'').toLowerCase().includes(searchTerm)) : clips;
+                if (!filtered.length) { timelineContainer.innerHTML = '<p style="text-align:center;color:var(--text3);padding:30px;">✨ No clips found</p>'; return; }
+                timelineContainer.innerHTML = filtered.map(clip => `
+                    <div class="clip-item" data-id="${clip.id}">
+                        <div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:0.7rem;color:var(--text3);">${clip.date}</span><span>${clip.pinned?'📌':''}</span></div>
+                        <div style="max-height:50px;overflow:hidden;font-size:0.85rem;color:var(--text2);">${escapeHtml(clip.plainText || '(image clip)')}</div>
+                        <div style="display:flex;gap:6px;margin-top:8px;">
+                            <button class="load-clip-btn" style="padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text2);cursor:pointer;font-size:0.7rem;">📝 Load</button>
+                            <button class="pin-clip-btn" style="padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text2);cursor:pointer;font-size:0.7rem;">${clip.pinned?'📍 Unpin':'📌 Pin'}</button>
+                            <button class="del-clip-btn" style="padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:transparent;color:#d76884;cursor:pointer;font-size:0.7rem;">🗑️</button>
+                        </div>
+                    </div>`).join('');
+                timelineContainer.querySelectorAll('.clip-item').forEach(item => {
+                    item.addEventListener('click', e => { if(e.target.closest('button')) return; const clip = clips.find(c=>c.id===Number(item.dataset.id)); if(clip){ editorArea.innerHTML = clip.content; saveEditorDraft(); switchTab('editor'); showToast('📋 Clip loaded'); } });
+                });
+                timelineContainer.querySelectorAll('.load-clip-btn').forEach(btn => btn.addEventListener('click', e => { e.stopPropagation(); const clip = clips.find(c=>c.id===Number(btn.closest('.clip-item').dataset.id)); if(clip){ editorArea.innerHTML = clip.content; saveEditorDraft(); switchTab('editor'); showToast('📋 Clip loaded'); } }));
+                timelineContainer.querySelectorAll('.pin-clip-btn').forEach(btn => btn.addEventListener('click', e => { e.stopPropagation(); const clip = clips.find(c=>c.id===Number(btn.closest('.clip-item').dataset.id)); if(clip){ clip.pinned=!clip.pinned; saveClips(); renderTimeline(); } }));
+                timelineContainer.querySelectorAll('.del-clip-btn').forEach(btn => btn.addEventListener('click', e => { e.stopPropagation(); if(!confirm('Delete?'))return; clips=clips.filter(c=>c.id!==Number(btn.closest('.clip-item').dataset.id)); saveClips(); renderTimeline(); showToast('🗑️ Deleted'); }));
+            }
+            searchHistoryInput.addEventListener('input', renderTimeline);
+            document.getElementById('btnExportClips').addEventListener('click', () => { const blob=new Blob([JSON.stringify(clips,null,2)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='nexuspaste-backup.json'; a.click(); showToast('📤 Exported'); });
+            document.getElementById('btnImportClips').addEventListener('click', () => importFileInput.click());
+            importFileInput.addEventListener('change', () => { const file=importFileInput.files[0]; if(!file)return; const reader=new FileReader(); reader.onload=ev=>{ try{ const imported=JSON.parse(ev.target.result); if(Array.isArray(imported)){ clips=[...imported,...clips]; saveClips(); renderTimeline(); showToast('📥 Imported'); } }catch{ showToast('❌ Invalid JSON'); } }; reader.readAsText(file); importFileInput.value=''; });
+
+            // ---------- KobBot AI ----------
+            kobbotTrigger.addEventListener('click', e => { e.stopPropagation(); kobbotDropdown.classList.toggle('active'); });
+            document.addEventListener('click', e => { if(!kobbotTrigger.contains(e.target) && !kobbotDropdown.contains(e.target)) kobbotDropdown.classList.remove('active'); });
+            kobbotDropdown.addEventListener('click', e => {
+                const btn = e.target.closest('button'); if(!btn) return;
+                if(btn.id==='btnUploadImageDrawer'){ hiddenFileInput.click(); kobbotDropdown.classList.remove('active'); return; }
+                const action = btn.dataset.ai; if(!action) return;
+                const text = editorArea.textContent.trim(); if(!text) { showToast('⚠️ Please enter text'); kobbotDropdown.classList.remove('active'); return; }
+                kobbotDropdown.classList.remove('active'); showToast(`🤖 KobBot processing: ${action}...`);
+                setTimeout(() => {
+                    const responses = {
+                        explain: `📝 <b>Analysis:</b> ${text.length} chars, ~${text.split(/\s+/).length} words.`,
+                        improve: `✨ <b>Improved:</b><br>${text.replace(/\s+/g,' ').trim().replace(/\bi\b/g,'I')}`,
+                        summarize: `📋 <b>Summary:</b> ${text.split('.')[0]}.`,
+                        translate: `🌍 <b>Translate:</b> Connect API for full translation.`,
+                        'generate-code': `💻 <b>Generated Code:</b><br><pre>function process() { return "${text.slice(0,20)}"; }</pre>`,
+                        'fix-bugs': `🐞 <b>Bug Fixer:</b><br>${/function|const |let /.test(text) ? 'Code detected – common issues checked.' : 'No code patterns found.'}`
+                    };
+                    showModal(`🤖 KobBot AI — ${action}`, responses[action] || `Processed ${action}`);
+                }, 800);
+            });
+            hiddenFileInput.addEventListener('change', () => {
+                Array.from(hiddenFileInput.files).forEach(file => { if(file.type.startsWith('image/')){ const reader=new FileReader(); reader.onload=ev=>{ const img=document.createElement('img'); img.src=ev.target.result; img.style.maxWidth='100%'; img.style.maxHeight='300px'; img.style.borderRadius='8px'; img.style.margin='6px'; editorArea.appendChild(img); saveEditorDraft(); }; reader.readAsDataURL(file); } });
+                hiddenFileInput.value=''; showToast('📷 Image added');
+            });
+
+            // ---------- Fixed Assistant Functions ----------
+            async function captureScreenshot() {
+                try {
+                    const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+                    const video = document.createElement('video');
+                    video.srcObject = stream;
+                    await video.play();
+                    const canvas = document.createElement('canvas');
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    const ctx2 = canvas.getContext('2d');
+                    ctx2.drawImage(video, 0, 0);
+                    const dataUrl = canvas.toDataURL('image/png');
+                    const img = document.createElement('img');
+                    img.src = dataUrl;
+                    img.style.maxWidth = '100%'; img.style.maxHeight = '300px'; img.style.borderRadius = '8px'; img.style.margin = '6px';
+                    editorArea.appendChild(img); saveEditorDraft();
+                    stream.getTracks().forEach(track => track.stop());
+                    showToast('📸 Screenshot added to editor');
+                } catch (e) {
+                    showToast('❌ Screenshot cancelled or not supported. Please allow screen sharing.');
+                }
+            }
+
+            function startScreenRecord() {
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+                    showToast('❌ Screen recording not supported in this browser'); return;
+                }
+                navigator.mediaDevices.getDisplayMedia({ video: true, audio: false }).then(stream => {
+                    const mediaRecorder = new MediaRecorder(stream);
+                    const chunks = [];
+                    mediaRecorder.ondataavailable = e => chunks.push(e.data);
+                    mediaRecorder.onstop = () => {
+                        const blob = new Blob(chunks, { type: 'video/webm' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a'); a.href = url; a.download = 'nexus-screen-recording.webm'; a.click();
+                        URL.revokeObjectURL(url);
+                        showToast('🎥 Recording saved');
+                    };
+                    mediaRecorder.start();
+                    showToast('🔴 Recording... Click "Stop sharing" in the browser bar to finish.');
+                    stream.getVideoTracks()[0].onended = () => mediaRecorder.stop();
+                }).catch(() => showToast('❌ Screen recording cancelled'));
+            }
+
+            function openDictionary() {
+                const word = prompt('Enter a word to look up:');
+                if (!word) return;
+                showToast('📖 Looking up...');
+                fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`)
+                    .then(r => r.json()).then(data => {
+                        if (!Array.isArray(data) || !data.length) throw new Error('Not found');
+                        const entry = data[0];
+                        const meanings = entry.meanings.map(m => `<b>${m.partOfSpeech}</b>: ${m.definitions.slice(0, 2).map(d => d.definition).join('; ')}`).join('<br>');
+                        const html = `<h4>${entry.word}</h4><p>${meanings}</p>`;
+                        showModal('📖 Dictionary', html);
+                    }).catch(() => {
+                        window.open(`https://www.dictionary.com/browse/${encodeURIComponent(word)}`, '_blank');
+                        showToast('📖 Opened in new tab (API unavailable)');
+                    });
+            }
+
+            function openTranslator() {
+                const text = editorArea.textContent.trim();
+                if (!text) { showToast('⚠️ Please enter text to translate'); return; }
+                const lang = prompt('Target language code (e.g., es, fr, de, zh):', 'es');
+                if (!lang) return;
+                showToast('🌐 Translating...');
+                fetch('https://libretranslate.de/translate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ q: text, source: 'en', target: lang, format: 'text' })
+                }).then(r => r.json()).then(data => {
+                    if (data.translatedText) showModal('🌐 Translation', `<p>${data.translatedText}</p>`);
+                    else throw new Error('No translation');
+                }).catch(() => {
+                    window.open(`https://translate.google.com/?sl=auto&tl=${lang}&text=${encodeURIComponent(text)}&op=translate`, '_blank');
+                    showToast('🌐 Opened in new tab (API unavailable)');
+                });
+            }
+
+            function downloadPDF() {
+                showToast('🖨️ Opening print dialog – choose "Save as PDF"');
+                setTimeout(() => window.print(), 300);
+            }
+
+            function downloadHTML() {
+                const blob = new Blob([editorArea.innerHTML], { type: 'text/html' });
+                const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'nexus-note.html'; a.click();
+                showToast('📄 HTML downloaded');
+            }
+
+            async function extractTextFromImage() {
+                hiddenFileInput.onchange = null; // reset
+                const file = await new Promise(resolve => {
+                    hiddenFileInput.onchange = () => resolve(hiddenFileInput.files[0]);
+                    hiddenFileInput.click();
+                });
+                if (!file) return;
+                showToast('🔍 OCR processing...');
+                const reader = new FileReader();
+                reader.onload = async (e) => {
+                    try {
+                        const { data: { text } } = await Tesseract.recognize(e.target.result, 'eng', {
+                            logger: m => console.log(m)
+                        });
+                        editorArea.innerHTML += (editorArea.innerHTML ? '\n' : '') + text;
+                        saveEditorDraft();
+                        showToast('✅ Text extracted from image');
+                    } catch (err) { showToast('❌ OCR failed'); }
+                };
+                reader.readAsDataURL(file);
+                // Restore normal image upload listener
+                hiddenFileInput.onchange = () => {
+                    Array.from(hiddenFileInput.files).forEach(file => { if(file.type.startsWith('image/')){ const reader=new FileReader(); reader.onload=ev=>{ const img=document.createElement('img'); img.src=ev.target.result; img.style.maxWidth='100%'; img.style.maxHeight='300px'; img.style.borderRadius='8px'; img.style.margin='6px'; editorArea.appendChild(img); saveEditorDraft(); }; reader.readAsDataURL(file); } });
+                    hiddenFileInput.value='';
+                    showToast('📷 Image added');
+                };
+            }
+
+            function speakText() {
+                const text = editorArea.textContent.trim();
+                if (!text) return showToast('⚠️ No text to read');
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'en-US';
+                speechSynthesis.speak(utterance);
+                showToast('🔊 Reading...');
+            }
+
+            // Assistant panel listener
+            document.getElementById('assistantGrid').addEventListener('click', e => {
+                const card = e.target.closest('.assistant-card');
+                if (!card) return;
+                const action = card.dataset.action;
+                switch (action) {
+                    case 'screenshot': captureScreenshot(); break;
+                    case 'screenrecord': startScreenRecord(); break;
+                    case 'dictionary': openDictionary(); break;
+                    case 'translator': openTranslator(); break;
+                    case 'downloadpdf': downloadPDF(); break;
+                    case 'downloadhtml': downloadHTML(); break;
+                    case 'ocr': extractTextFromImage(); break;
+                    case 'tts': speakText(); break;
+                }
+            });
+
+            btnTTS.addEventListener('click', speakText);
+
+            // ---------- Dev Tools (unchanged) ----------
+            function openCalculator() {
+                const modal = document.createElement('div'); modal.className = 'modal-overlay';
+                modal.innerHTML = `<div class="modal"><h3>🧮 Calculator</h3><input id="calcInput" style="width:100%;padding:12px;background:var(--editor-bg);border:1px solid var(--border);color:var(--text);border-radius:8px;margin-bottom:10px;font-size:1.2rem;text-align:right;" value="0" readonly><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">${['7','8','9','/','4','5','6','*','1','2','3','-','0','.','=','+','C','(',')','⌫'].map(k=>`<button class="calc-btn" style="padding:14px;background:var(--dev-bg);border:1px solid var(--border);border-radius:8px;color:var(--text);cursor:pointer;font-size:1rem;">${k}</button>`).join('')}</div><button class="btn" style="width:100%;margin-top:12px;" id="closeCalc">Close</button></div>`;
+                document.body.appendChild(modal);
+                const input = modal.querySelector('#calcInput'); let val = '0';
+                modal.querySelectorAll('.calc-btn').forEach(b => b.addEventListener('click', () => {
+                    const v = b.textContent;
+                    if (v==='=') { try { const result = Function('"use strict";return (' + val + ')')(); val = String(result); } catch { val = 'Error'; } }
+                    else if (v==='C') val = '0';
+                    else if (v==='⌫') val = val.slice(0,-1) || '0';
+                    else { if (val==='0' && v!=='.') val = v; else val += v; }
+                    input.value = val;
+                }));
+                modal.querySelector('#closeCalc').addEventListener('click', () => modal.remove());
+                modal.addEventListener('click', e => { if(e.target===modal) modal.remove(); });
+            }
+            async function openForex() {
+                const modal = document.createElement('div'); modal.className = 'modal-overlay';
+                modal.innerHTML = `<div class="modal"><h3>💱 Live Forex</h3><div style="display:flex;gap:10px;margin-bottom:6px;"><input type="number" id="forexAmount" value="1" style="flex:1;padding:10px;background:var(--editor-bg);border:1px solid var(--border);color:var(--text);border-radius:8px;"><select id="forexFrom" style="flex:1;padding:10px;background:var(--editor-bg);border:1px solid var(--border);color:var(--text);border-radius:8px;"></select><select id="forexTo" style="flex:1;padding:10px;background:var(--editor-bg);border:1px solid var(--border);color:var(--text);border-radius:8px;"></select></div><div id="forexResult" style="font-size:1.2rem;text-align:center;color:var(--green);margin:10px 0;">…</div><button class="btn" style="width:100%;margin-top:12px;" id="closeForex">Close</button></div>`;
+                document.body.appendChild(modal);
+                let rates = {}; try { const res = await fetch('https://open.er-api.com/v6/latest/USD'); rates = (await res.json()).rates; } catch { rates = {USD:1,EUR:0.92,GBP:0.79,JPY:149.5}; }
+                const currencies = Object.keys(rates).sort();
+                modal.querySelector('#forexFrom').innerHTML = modal.querySelector('#forexTo').innerHTML = currencies.map(c => `<option>${c}</option>`).join('');
+                modal.querySelector('#forexTo').value = 'EUR';
+                const convert = () => { const amt = parseFloat(modal.querySelector('#forexAmount').value)||0; const from = modal.querySelector('#forexFrom').value, to = modal.querySelector('#forexTo').value; if(rates[from]&&rates[to]) modal.querySelector('#forexResult').textContent = `${amt} ${from} = ${((amt/rates[from])*rates[to]).toFixed(4)} ${to}`; };
+                modal.querySelector('#forexAmount').addEventListener('input', convert);
+                modal.querySelector('#forexFrom').addEventListener('change', convert);
+                modal.querySelector('#forexTo').addEventListener('change', convert);
+                convert();
+                modal.querySelector('#closeForex').addEventListener('click', () => modal.remove());
+                modal.addEventListener('click', e => { if(e.target===modal) modal.remove(); });
+            }
+            document.getElementById('devToolsGrid').addEventListener('click', async e => {
+                const card = e.target.closest('.dev-tool-card'); if(!card) return;
+                const tool = card.dataset.devtool;
+                if(tool==='calculator') { openCalculator(); return; }
+                if(tool==='forex') { openForex(); return; }
+                const input = editorArea.textContent.trim(); let result = '';
+                try {
+                    switch(tool){
+                        case 'beautify-json': result = JSON.stringify(JSON.parse(input||'{}'), null, 4); break;
+                        case 'minify-json': result = JSON.stringify(JSON.parse(input||'{}')); break;
+                        case 'base64-encode': result = btoa(String.fromCharCode(...new TextEncoder().encode(input||'hello'))); break;
+                        case 'base64-decode': result = new TextDecoder().decode(Uint8Array.from(atob(input), c => c.charCodeAt(0))); break;
+                        case 'uuid-gen': result = crypto.randomUUID(); break;
+                        case 'hash-sha': const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(input||'NexusPaste')); result = Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2,'0')).join(''); break;
+                        case 'jwt-decode': const parts = input.split('.'); if(parts.length===3) result = JSON.stringify(JSON.parse(atob(parts[1].replace(/-/g,'+').replace(/_/g,'/'))), null, 2); else result = 'Invalid JWT'; break;
+                        case 'regex-test': const lines = input.split('\n'); const re = new RegExp(lines[0]||'', 'g'); const matches = (lines.slice(1).join('\n')).match(re); result = `Pattern: ${lines[0]}\nMatches: ${matches?.length||0}\n${matches?.map(m=>'• '+m).join('\n')||'No matches'}`; break;
+                        case 'url-encode': result = encodeURIComponent(input); break;
+                    }
+                    devResultTitle.textContent = tool.toUpperCase(); devResultContent.textContent = result; devResultContainer.style.display = 'block'; showToast(`✅ ${tool} done`);
+                } catch(err) { showToast(`❌ Error: ${err.message}`); }
+            });
+            document.getElementById('btnCopyDevResult').addEventListener('click', () => { navigator.clipboard?.writeText(devResultContent.textContent).then(() => showToast('📋 Copied')); });
+
+            // ---------- Share ----------
+            document.getElementById('btnShareQR').addEventListener('click', () => { qrContainer.innerHTML=''; const text = editorArea.textContent.trim(); if(!text) return showToast('⚠️ Empty editor'); new QRCode(qrContainer, { text: text.slice(0,800), width:180, height:180, colorDark:'#ffffff', colorLight:'#1a1d24' }); showToast('📱 QR generated'); });
+            document.getElementById('btnShareCopyLink').addEventListener('click', () => { const text = editorArea.textContent.trim(); if(!text) return showToast('⚠️ Nothing to copy'); navigator.clipboard?.writeText(text).then(() => showToast('🔗 Copied')); });
+            document.getElementById('btnShareDownload').addEventListener('click', () => { const blob = new Blob([editorArea.innerHTML],{type:'text/html'}); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download='nexus-note.html'; a.click(); showToast('📥 Downloaded'); });
+            document.getElementById('btnShareEmail').addEventListener('click', () => { window.location.href = `mailto:?subject=NexusPaste Snippet&body=${encodeURIComponent(editorArea.textContent.trim())}`; });
+
+            /* ================================================================
+               Brought over from the desktop build.
+
+               Only the parts a browser can genuinely do. Always-on-top,
+               the global hotkey, the tray icon and LAN sync over mDNS
+               are not among them and never will be — a tab cannot float
+               over your editor, which is the entire reason the native
+               build exists.
+               ================================================================ */
+
+            // ---------- Copy a pasted image back out ----------
+            /*
+             * The first gap the desktop build was written to close:
+             * images go in and cannot come out again.
+             *
+             * The button lives outside the editor on purpose. Everything
+             * inside editorArea is serialised into localStorage as the
+             * note, so anything injected in there would be saved as part
+             * of what you wrote and reappear forever.
+             */
+            const imgCopyBtn = document.createElement('button');
+            imgCopyBtn.textContent = '📋 Copy image';
+            imgCopyBtn.style.cssText = 'position:fixed;z-index:9999;display:none;padding:6px 12px;' +
+                'border-radius:8px;border:1px solid var(--border);background:var(--surface2);' +
+                'color:var(--text);font-size:0.75rem;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.4);';
+            document.body.appendChild(imgCopyBtn);
+            let imgCopyTarget = null;
+
+            function hideImgCopy() { imgCopyBtn.style.display = 'none'; imgCopyTarget = null; }
+
+            editorArea.addEventListener('click', e => {
+                const img = e.target.closest ? e.target.closest('img') : null;
+                if (!img || !editorArea.contains(img)) return hideImgCopy();
+                imgCopyTarget = img;
+                const r = img.getBoundingClientRect();
+                imgCopyBtn.style.display = 'block';
+                imgCopyBtn.style.left = Math.round(r.left + 8) + 'px';
+                imgCopyBtn.style.top = Math.round(r.top + 8) + 'px';
+            });
+            document.addEventListener('scroll', hideImgCopy, true);
+            window.addEventListener('resize', hideImgCopy);
+
+            imgCopyBtn.addEventListener('click', async () => {
+                if (!imgCopyTarget) return;
+                try {
+                    /*
+                     * Redrawn through a canvas rather than copied as-is.
+                     * Every browser that supports writing images to the
+                     * clipboard accepts image/png and nothing else, and
+                     * a pasted photo is usually a JPEG.
+                     */
+                    const img = imgCopyTarget;
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.naturalWidth || img.width;
+                    canvas.height = img.naturalHeight || img.height;
+                    canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+                    const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+                    if (!blob) throw new Error('could not read the image');
+                    await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+                    showToast('📋 Image copied — paste it anywhere');
+                } catch (err) {
+                    // Firefox still does not implement clipboard.write for
+                    // images. Saying so beats a button that does nothing.
+                    showToast('❌ This browser cannot copy images out. Chrome, Edge and Safari can.');
+                }
+                hideImgCopy();
+            });
+
+            // ---------- Vault ----------
+            /*
+             * The desktop build encrypts with Argon2. A browser has no
+             * Argon2 without shipping a WebAssembly blob, so this uses
+             * PBKDF2-SHA256 at 310,000 iterations, which is what OWASP
+             * asks for and what the platform provides natively.
+             *
+             * Weaker than Argon2 against custom hardware. Still far
+             * beyond guessing a decent passphrase, and the alternative
+             * on offer was no encryption at all.
+             *
+             * There is no recovery. Nothing here can read the vault
+             * without the passphrase, which is the point, and also means
+             * forgetting it loses the contents permanently.
+             */
+            const VAULT_KEY = 'nexus_vault';
+            const enc = new TextEncoder(), dec = new TextDecoder();
+            const b64 = b => btoa(String.fromCharCode(...new Uint8Array(b)));
+            const unb64 = t => Uint8Array.from(atob(t), c => c.charCodeAt(0));
+
+            async function vaultKey(pass, salt) {
+                const base = await crypto.subtle.importKey('raw', enc.encode(pass), 'PBKDF2', false, ['deriveKey']);
+                return crypto.subtle.deriveKey(
+                    { name: 'PBKDF2', salt, iterations: 310000, hash: 'SHA-256' },
+                    base, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+            }
+
+            async function vaultSave(pass, text) {
+                const salt = crypto.getRandomValues(new Uint8Array(16));
+                const iv = crypto.getRandomValues(new Uint8Array(12));
+                const key = await vaultKey(pass, salt);
+                const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, enc.encode(text));
+                localStorage.setItem(VAULT_KEY, JSON.stringify({ s: b64(salt), i: b64(iv), c: b64(ct) }));
+            }
+
+            async function vaultOpen(pass) {
+                const raw = localStorage.getItem(VAULT_KEY);
+                if (!raw) return null;
+                const { s, i, c } = JSON.parse(raw);
+                const key = await vaultKey(pass, unb64(s));
+                // A wrong passphrase fails here, in the tag check, rather
+                // than returning plausible-looking rubbish.
+                const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: unb64(i) }, key, unb64(c));
+                return dec.decode(pt);
+            }
+
+            /* Pure logic, lifted straight from the desktop build. */
+            function looksLikeSecret(text) {
+                if (!text) return false;
+                return /\b(sk-[A-Za-z0-9]{20,}|AIza[0-9A-Za-z_\-]{30,}|ghp_[A-Za-z0-9]{30,}|xox[baprs]-[A-Za-z0-9-]{10,})\b/.test(text)
+                    || /-----BEGIN [A-Z ]*PRIVATE KEY-----/.test(text)
+                    || /\b(password|passwd|secret|api[_-]?key|token)\s*[:=]\s*\S{6,}/i.test(text);
+            }
+
+            const btnVault = document.createElement('button');
+            btnVault.id = 'btnVault';
+            btnVault.title = 'Vault';
+            btnVault.textContent = '🔒';
+            btnVault.style.cssText = 'background:none;border:none;color:var(--text2);cursor:pointer;font-size:1.05rem;padding:6px;';
+            (document.getElementById('btnTheme')?.parentElement || document.body).appendChild(btnVault);
+
+            btnVault.addEventListener('click', async () => {
+                const exists = !!localStorage.getItem(VAULT_KEY);
+                if (exists) {
+                    const pass = prompt('Passphrase to unlock the vault:');
+                    if (!pass) return;
+                    try {
+                        const text = await vaultOpen(pass);
+                        editorArea.innerHTML = text;
+                        saveEditorDraft();
+                        showToast('🔓 Vault opened');
+                    } catch {
+                        showToast('❌ Wrong passphrase');
+                    }
+                    return;
+                }
+                const content = editorArea.innerHTML.trim();
+                if (!content) return showToast('⚠️ Nothing to lock away');
+                const pass = prompt('Choose a passphrase. There is no way to recover it:');
+                if (!pass) return;
+                if (pass.length < 8) return showToast('⚠️ Use at least 8 characters');
+                if (prompt('Type it again:') !== pass) return showToast('⚠️ Those did not match');
+                await vaultSave(pass, content);
+                editorArea.innerHTML = '';
+                saveEditorDraft();
+                showToast('🔒 Locked. The editor is cleared — tap 🔒 to open it again.');
+            });
+
+            /* A quiet nudge, not a block: it is your note. */
+            editorArea.addEventListener('paste', () => {
+                setTimeout(() => {
+                    if (looksLikeSecret(editorArea.textContent)) {
+                        showToast('🔑 That looks like a key or password — 🔒 encrypts this note');
+                    }
+                }, 50);
+            });
+
+            // ---------- Shared in from another app ----------
+            /*
+             * The phone answer to "float over everything", which on a
+             * phone is impossible: a web page cannot sit above other
+             * apps on Android or iOS, and no permission changes that.
+             *
+             * What it can do is be in the share sheet. Once installed to
+             * the home screen, Android lists NexusPaste wherever you tap
+             * Share — selected text in WhatsApp, a link in Chrome, a
+             * quote from a PDF. It arrives here as query parameters and
+             * is appended to the note.
+             *
+             * Not floating. But the reason you wanted floating was to
+             * catch a thought without losing your place, and this does
+             * that from any app on the phone, in two taps.
+             *
+             * Android Chrome only. iOS Safari has never implemented
+             * share_target — on an iPhone this does nothing, and the
+             * only route is the native share extension in the desktop
+             * project.
+             */
+            (function receiveShare() {
+                const q = new URLSearchParams(location.search);
+                const parts = [q.get('title'), q.get('text'), q.get('url')]
+                    .filter(v => v && v.trim());
+                if (!parts.length) return;
+
+                // Appended, never replacing: arriving from a share must
+                // not be able to wipe what is already in the editor.
+                const incoming = parts.join('\n');
+                const div = document.createElement('div');
+                div.textContent = incoming;
+                if (editorArea.innerHTML.trim()) editorArea.appendChild(document.createElement('br'));
+                editorArea.appendChild(div);
+                saveEditorDraft();
+
+                // Drop the parameters so a refresh does not paste it twice.
+                history.replaceState(null, '', location.pathname);
+                setTimeout(() => showToast('📥 Added what you shared'), 400);
+            })();
+
+            // ---------- Float over everything ----------
+            /*
+             * The closest a web page gets to the native build.
+             *
+             * Document Picture-in-Picture opens a real OS window that
+             * sits above every other application — your editor, a PDF, a
+             * game — and it renders whatever HTML you put in it. No
+             * install, no permission prompt, no extension.
+             *
+             * It is not a replacement for the Tauri build. Desktop
+             * Chromium only: no Firefox, no Safari, and nothing at all
+             * on a phone, where floating over other apps needs a native
+             * overlay permission that only an installed app can hold.
+             *
+             * The real editor node is moved into the floating window
+             * rather than copied. Moving a node carries its event
+             * listeners with it, so autosave, paste handling and the
+             * image copy button all keep working; a copy would leave
+             * two editors quietly disagreeing about what you wrote.
+             */
+            const canFloat = 'documentPictureInPicture' in window;
+            let floatWin = null;
+
+            const btnFloat = document.createElement('button');
+            btnFloat.id = 'btnFloat';
+            btnFloat.title = 'Float over other apps';
+            btnFloat.textContent = '⧉';
+            btnFloat.style.cssText = 'background:none;border:none;color:var(--text2);cursor:pointer;font-size:1.05rem;padding:6px;';
+            (document.getElementById('btnTheme')?.parentElement || document.body).appendChild(btnFloat);
+
+            btnFloat.addEventListener('click', async () => {
+                if (!canFloat) {
+                    return showToast('⧉ Needs desktop Chrome or Edge. Firefox and phones cannot float a page over other apps.');
+                }
+                if (floatWin) { floatWin.close(); return; }
+
+                try {
+                    const pip = await window.documentPictureInPicture.requestWindow({ width: 420, height: 560 });
+                    floatWin = pip;
+
+                    /*
+                     * A new window starts with no styles at all. Same-origin
+                     * sheets can be copied rule by rule; the ones loaded
+                     * from cdnjs and Google Fonts throw on .cssRules because
+                     * of cross-origin rules, so those are re-linked by href
+                     * instead and fetched again by the new window.
+                     */
+                    for (const sheet of Array.from(document.styleSheets)) {
+                        try {
+                            const css = Array.from(sheet.cssRules).map(r => r.cssText).join('');
+                            const style = pip.document.createElement('style');
+                            style.textContent = css;
+                            pip.document.head.appendChild(style);
+                        } catch {
+                            if (!sheet.href) continue;
+                            const link = pip.document.createElement('link');
+                            link.rel = 'stylesheet';
+                            link.href = sheet.href;
+                            pip.document.head.appendChild(link);
+                        }
+                    }
+
+                    pip.document.documentElement.className = document.documentElement.className;
+                    pip.document.body.style.cssText =
+                        'margin:0;padding:10px;background:var(--bg);color:var(--text);' +
+                        'font-family:inherit;height:100vh;box-sizing:border-box;overflow:auto;';
+
+                    // Remember where it came from so it can go back exactly there.
+                    const home = editorArea.parentElement;
+                    const after = editorArea.nextSibling;
+                    pip.document.body.appendChild(editorArea);
+                    editorArea.focus();
+                    showToast('⧉ Floating — it stays on top of other apps');
+
+                    pip.addEventListener('pagehide', () => {
+                        // Save before the window goes, then put the editor
+                        // back. If this did not run, the editor would be
+                        // destroyed along with the window and the page
+                        // would be left with a hole where it used to be.
+                        saveEditorDraft();
+                        if (after && after.parentElement === home) home.insertBefore(editorArea, after);
+                        else home.appendChild(editorArea);
+                        floatWin = null;
+                    });
+                } catch (err) {
+                    floatWin = null;
+                    showToast('❌ Could not open the floating window');
+                }
+            });
+
+            // A floating window left open when the page goes is an orphan.
+            window.addEventListener('pagehide', () => { if (floatWin) floatWin.close(); });
+
+            // ---------- Theme & Voice ----------
+            document.getElementById('btnTheme').addEventListener('click', () => { document.documentElement.classList.toggle('light-theme'); showToast(document.documentElement.classList.contains('light-theme') ? '☀️ Light mode' : '🌙 Dark mode'); });
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (SpeechRecognition) {
+                recognition = new SpeechRecognition(); recognition.continuous = false; recognition.interimResults = false; recognition.lang = 'en-US';
+                recognition.onstart = () => { isListening = true; btnVoice.style.color = 'var(--magenta)'; showToast('🎤 Listening…'); };
+                recognition.onresult = e => { const transcript = e.results[0][0].transcript; editorArea.textContent += (editorArea.textContent ? ' ' : '') + transcript; saveEditorDraft(); };
+                recognition.onerror = (event) => { const msgs = { 'not-allowed': '🔇 Mic denied', 'no-speech': '🗣️ No speech', 'network': '🌐 Network error' }; showToast(msgs[event.error] || '❌ Mic error'); };
+                recognition.onend = () => { isListening = false; btnVoice.style.color = 'var(--text2)'; };
+                btnVoice.addEventListener('click', () => { if (isListening) recognition.stop(); else recognition.start(); });
+            } else { btnVoice.style.display = 'none'; }
+
+            // ---------- Draggable FAB & App Open/Close ----------
+            const FAB_SIZE = 58; let isDragging = false, startX, startY, fabLeft, fabTop;
+            function clamp(v,min,max){ return Math.min(max, Math.max(min, v)); }
+            function moveFabTo(l,t){ fab.style.left = clamp(l,0,window.innerWidth-FAB_SIZE)+'px'; fab.style.top = clamp(t,0,window.innerHeight-FAB_SIZE)+'px'; }
+            if(!fab.style.left){ fab.style.left = (window.innerWidth-FAB_SIZE-24)+'px'; fab.style.top = (window.innerHeight-FAB_SIZE-24-20)+'px'; }
+            fab.addEventListener('pointerdown', e => { if(e.pointerType==='mouse'&&e.button!==0) return; isDragging=false; startX=e.clientX; startY=e.clientY; fabLeft=parseFloat(fab.style.left); fabTop=parseFloat(fab.style.top); fab.setPointerCapture(e.pointerId); e.preventDefault(); });
+            fab.addEventListener('pointermove', e => { if(!fab.hasPointerCapture(e.pointerId)) return; if(Math.abs(e.clientX-startX)>2||Math.abs(e.clientY-startY)>2) isDragging=true; if(isDragging) moveFabTo(fabLeft+e.clientX-startX, fabTop+e.clientY-startY); });
+            fab.addEventListener('pointerup', e => { fab.releasePointerCapture(e.pointerId); if(!isDragging) openApp(); isDragging=false; });
+            window.addEventListener('resize', () => { moveFabTo(parseFloat(fab.style.left)||(window.innerWidth-FAB_SIZE-24), parseFloat(fab.style.top)||(window.innerHeight-FAB_SIZE-44)); particleCanvas.width = window.innerWidth; particleCanvas.height = window.innerHeight; });
+
+            function openApp() { overlay.classList.add('active'); fab.classList.add('hidden'); loadEditorDraft(); loadClips(); if(currentTab==='history') renderTimeline(); startParticles(); }
+            function closeApp() { overlay.classList.remove('active'); fab.classList.remove('hidden'); saveEditorDraft(); stopParticles(); }
+            closeBtn.addEventListener('click', closeApp);
+            overlay.addEventListener('click', e => { if(e.target===overlay) closeApp(); });
+
+            // ---------- Particles ----------
+            function initParticles() { particles = Array.from({length:60}, () => ({ x:Math.random()*particleCanvas.width, y:Math.random()*particleCanvas.height, vx:(Math.random()-0.5)*0.4, vy:(Math.random()-0.5)*0.4, r:Math.random()*2+0.5 })); }
+            function animateParticles() { ctx.clearRect(0,0,particleCanvas.width,particleCanvas.height); ctx.fillStyle='rgba(79,140,227,0.4)'; particles.forEach(p => { p.x+=p.vx; p.y+=p.vy; if(p.x<0||p.x>particleCanvas.width) p.vx*=-1; if(p.y<0||p.y>particleCanvas.height) p.vy*=-1; ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill(); }); particleAnimId = requestAnimationFrame(animateParticles); }
+            function startParticles() { particleCanvas.width=window.innerWidth; particleCanvas.height=window.innerHeight; if(!particles.length) initParticles(); if(!particleAnimId) animateParticles(); }
+            function stopParticles() { if(particleAnimId) { cancelAnimationFrame(particleAnimId); particleAnimId=null; } ctx.clearRect(0,0,particleCanvas.width,particleCanvas.height); }
+
+            // ---------- PWA Service Worker ----------
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register("./sw.js")
+                    .then(() => console.log("SW registered"))
+                    .catch(err => console.log("SW failed", err));
+            }
+
+            loadClips();
+            setTimeout(() => showToast('⬡ NexusPaste AI Assistant ready'), 600);
+        })();
+    </script>
+</body>
+</html>
