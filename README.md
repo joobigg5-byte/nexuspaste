@@ -166,3 +166,23 @@ the version that goes everywhere instead, and now floats on desktop.
 Searching your clips (the box above the history list), voice dictation,
 OCR, QR, dictionary, translation and exchange rates were all in your
 file already.
+
+## Tested
+
+Run in a real headless Chromium against a local copy, clicking the
+actual buttons rather than trusting that the code looks right. 17 checks:
+
+    the app opens                            the vault encrypts and clears
+    both new buttons render                  the stored vault is unreadable
+    typing is saved                          the right passphrase opens it
+    hiding the tab saves immediately         clicking an image offers Copy
+    the note survives a refresh              the button is not saved into the note
+    saving a clip works                      shared text is added, not substituted
+    the share parameters are cleared         manifest.json and sw.js are served
+
+That run found a real bug worth recording: the share handler ran at page
+load, *before* the saved note had been read back from storage, so sharing
+something in appended it to an empty editor and saved that as the whole
+note — destroying whatever was already there. The append logic was
+right; it was appending to the wrong thing. `loadEditorDraft()` now runs
+first.

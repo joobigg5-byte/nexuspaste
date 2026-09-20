@@ -1084,8 +1084,19 @@
                     .filter(v => v && v.trim());
                 if (!parts.length) return;
 
-                // Appended, never replacing: arriving from a share must
-                // not be able to wipe what is already in the editor.
+                /*
+                 * Bring back the saved note FIRST.
+                 *
+                 * This runs at load, before anything has opened the app,
+                 * so the editor is still empty at this point — it is
+                 * only filled from storage when openApp runs. Appending
+                 * here without this line appends to nothing, saves that,
+                 * and the note you already had is gone. A share must
+                 * never be able to destroy what you wrote.
+                 */
+                loadEditorDraft();
+
+                // Appended, never replacing.
                 const incoming = parts.join('\n');
                 const div = document.createElement('div');
                 div.textContent = incoming;
